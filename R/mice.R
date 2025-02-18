@@ -478,7 +478,7 @@ mice <- function(data,
     visitSequence, predictorMatrix, formulas,
     modeltype, blots,
     post, c(from, to), printFlag, ...
-  )
+  ) # q contains the result from 
 
   if (!state$log) loggedEvents <- NULL
   if (state$log) row.names(loggedEvents) <- seq_len(nrow(loggedEvents))

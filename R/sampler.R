@@ -33,7 +33,7 @@ sampler <- function(data, m, ignore, where, imp, blocks, method,
           for (j in blocks[[h]]) {
             y <- data[, j]
             ry <- r[, j]
-            wy <- where[, j]
+            wy <- where[, j] # wy is the imputation mask ?
             data[(!ry) & wy, j] <- imp[[j]][(!ry)[wy], i]
           }
         }
@@ -47,7 +47,10 @@ sampler <- function(data, m, ignore, where, imp, blocks, method,
           user <- blots[[h]]
 
           # univariate/multivariate logic
+          # NOTES: since each block can have a different imputation method, 
+          # the following lines fetches the (if) specified method.
           theMethod <- method[h]
+          # if theMethod is empty, then the block is skipped
           empt <- theMethod == ""
           univ <- !empt && !is.passive(theMethod) &&
             !handles.format(paste0("mice.impute.", theMethod))
@@ -70,7 +73,7 @@ sampler <- function(data, m, ignore, where, imp, blocks, method,
           if (univ) {
             for (j in b) {
               imp[[j]][, i] <-
-                sampler.univ(
+                sampler.univ( # call the sampler.univ function defined on line 186
                   data = data, r = r, where = where,
                   pred = pred, formula = ff,
                   method = theMethod,
@@ -81,9 +84,11 @@ sampler <- function(data, m, ignore, where, imp, blocks, method,
                 )
 
               data[(!r[, j]) & where[, j], j] <-
-                imp[[j]][(!r[, j])[where[, j]], i]
+                imp[[j]][(!r[, j])[where[, j]], i] # update the data with the imputed values
 
               # optional post-processing
+              # after each univariate imputation, apply a user-defined post-processing operation
+              # -> Ex: if doing score grouped imputation, recalculate the score of the imputed values?
               cmd <- post[j]
               if (cmd != "") {
                 eval(parse(text = cmd))
@@ -143,6 +148,7 @@ sampler <- function(data, m, ignore, where, imp, blocks, method,
       } # end i loop (imputation number)
 
       # store means and sd of m imputes
+      # 1 = double, 1L = integer. why ? idk, both are 56bytes size. probably is a good reason for it
       k2 <- k - from + 1L
       if (length(visitSequence) > 0L) {
         for (h in visitSequence) {
@@ -181,14 +187,14 @@ sampler.univ <- function(data, r, where, pred, formula, method, yname, k,
                          ct = "pred", user, ignore, ...) {
   j <- yname[1L]
 
-  if (ct == "pred") {
-    vars <- colnames(data)[pred != 0]
-    xnames <- setdiff(vars, j)
-    if (length(xnames) > 0L) {
-      formula <- reformulate(backticks(xnames), response = backticks(j))
-      formula <- update(formula, ". ~ . ")
+  if (ct == "pred") { 
+    vars <- colnames(data)[pred != 0] # only predictors
+    xnames <- setdiff(vars, j) # exclude the response variable
+    if (length(xnames) > 0L) { # if there are predictors
+      formula <- reformulate(backticks(xnames), response = backticks(j)) # create the formula j ~ xnames
+      formula <- update(formula, ". ~ . ") 
     } else {
-      formula <- as.formula(paste0(j, " ~ 1"))
+      formula <- as.formula(paste0(j, " ~ 1")) # if there are no predictors, use j ~ 1
     }
   }
 
@@ -226,7 +232,7 @@ sampler.univ <- function(data, r, where, pred, formula, method, yname, k,
     return(numeric(0))
   }
 
-  cc <- wy[where[, j]]
+  cc <- wy[where[, j]] # wy is the imputation mask, cc is ?
   if (k == 1L) check.df(x, y, ry)
 
   # remove linear dependencies
@@ -238,11 +244,11 @@ sampler.univ <- function(data, r, where, pred, formula, method, yname, k,
   }
 
   # here we go
-  f <- paste("mice.impute", method, sep = ".")
-  imputes <- data[wy, j]
-  imputes[!cc] <- NA
+  f <- paste("mice.impute", method, sep = ".") # create the function name to call
+  imputes <- data[wy, j] # initialize imputes
+  imputes[!cc] <- NA # set imputes to NA where cc is false
 
   args <- c(list(y = y, ry = ry, x = x, wy = wy, type = type), user, list(...))
-  imputes[cc] <- do.call(f, args = args)
-  imputes
+  imputes[cc] <- do.call(f, args = args) # call the imputation function
+  imputes # return the imputes?
 }

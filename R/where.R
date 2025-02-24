@@ -86,6 +86,7 @@ check.where <- function(where, data, blocks) {
 # Spark version of check.where
 check.where.spark <- function(where, data, blocks) {
   if (is.null(where)) {
+    # print("**DEBUG** where is null")
     where <- make.where.spark(data, keyword = "missing")
   }
   
@@ -99,20 +100,29 @@ check.where.spark <- function(where, data, blocks) {
   # Num rows of a spark data frame is unknown until pulled, so dim(X) returns (NA, n_cols)
   # Thus n_rows needs to be calculated separately
   n_rows_where = where %>% dplyr::count() %>% dplyr::pull()
+  # print("**DEBUG** n_rows_where:")
+  # print(n_rows_where)
   n_rows_data = data %>% dplyr::count() %>% dplyr::pull()
-  if ((dim(data)[2] == dim(where)[2]) || (n_rows_where != n_rows_data)) {
+  # print("**DEBUG** n_rows_data:")
+  # print(n_rows_data)
+  if ((dim(data)[2] != dim(where)[2]) || (n_rows_where != n_rows_data)) {
     stop("Arguments `data` and `where` not of same size", call. = FALSE)
   }
   
-  # THIS PART NEEDS WORK, HOW TO check for NA value sin where ? anyNA(where) does not work for spark dataframes...
-  where <- as.logical(as.matrix(where))
-  contains_NA
-  if (anyNA(where)) {
+  #where <- as.logical(as.matrix(where)) #Not needed ?
+  if (is.na.spark(where)) { #from NA_utils.R
     stop("Argument `where` contains missing values", call. = FALSE)
   }
   
-  where <- matrix(where, nrow = nrow(data), ncol = ncol(data))
-  dimnames(where) <- dimnames(data)
-  where[, !colnames(where) %in% unlist(blocks)] <- FALSE
+  # where <- matrix(where, nrow = nrow(data), ncol = ncol(data))
+  # dimnames(where) <- dimnames(data)
+  blocks_list <- unlist(blocks)
+  cols_not_in_blocks <- colnames(where)[!colnames(where) %in% blocks_list]
+  
+  # Apply the transformation to set columns not in blocks to FALSE
+  for (col in cols_not_in_blocks) {
+    where <- where %>%
+      mutate(across(all_of(cols_not_in_blocks), ~ FALSE))
+  }
   where
 }

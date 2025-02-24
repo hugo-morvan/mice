@@ -28,6 +28,8 @@ make.where <- function(data,
   keyword <- match.arg(keyword)
 
   data <- check.dataform(data)
+  n_rows <- data %>% dplyr::count() %>% dplyr::pull()
+  
   where <- switch(keyword,
     missing = is.na(data),
     all = matrix(TRUE, nrow = nrow(data), ncol = ncol(data)),
@@ -36,6 +38,20 @@ make.where <- function(data,
   )
 
   dimnames(where) <- dimnames(data)
+  where
+}
+
+# Spark version of make.where
+make.where.spark <- function(data, keyword = c("missing", "all", "none", "observed")) {
+  keyword <- match.arg(keyword)
+  
+  data <- check.spark.dataform(data)
+  where <- switch(keyword,
+                  missing = na_locations(data),
+                  all = data %>% mutate(across(everything(), ~ TRUE)),
+                  none = data %>% mutate(across(everything(), ~ FALSE)),
+                  observed = data %>% mutate(across(everything(), ~ !is.na(.)))
+  )
   where
 }
 
@@ -61,6 +77,40 @@ check.where <- function(where, data, blocks) {
     stop("Argument `where` contains missing values", call. = FALSE)
   }
 
+  where <- matrix(where, nrow = nrow(data), ncol = ncol(data))
+  dimnames(where) <- dimnames(data)
+  where[, !colnames(where) %in% unlist(blocks)] <- FALSE
+  where
+}
+
+# Spark version of check.where
+check.where.spark <- function(where, data, blocks) {
+  if (is.null(where)) {
+    where <- make.where.spark(data, keyword = "missing")
+  }
+  
+  if (!inherits(where, "tbl_spark")) {
+    if (is.character(where)) {
+      return(make.where.spark(data, keyword = where))
+    } else {
+      stop("Argument `where` not a Spark DataFrame", call. = FALSE)
+    }
+  }
+  # Num rows of a spark data frame is unknown until pulled, so dim(X) returns (NA, n_cols)
+  # Thus n_rows needs to be calculated separately
+  n_rows_where = where %>% dplyr::count() %>% dplyr::pull()
+  n_rows_data = data %>% dplyr::count() %>% dplyr::pull()
+  if ((dim(data)[2] == dim(where)[2]) || (n_rows_where != n_rows_data)) {
+    stop("Arguments `data` and `where` not of same size", call. = FALSE)
+  }
+  
+  # THIS PART NEEDS WORK, HOW TO check for NA value sin where ? anyNA(where) does not work for spark dataframes...
+  where <- as.logical(as.matrix(where))
+  contains_NA
+  if (anyNA(where)) {
+    stop("Argument `where` contains missing values", call. = FALSE)
+  }
+  
   where <- matrix(where, nrow = nrow(data), ncol = ncol(data))
   dimnames(where) <- dimnames(data)
   where[, !colnames(where) %in% unlist(blocks)] <- FALSE

@@ -52,6 +52,35 @@ make.formulas <- function(data, blocks = make.blocks(data),
   formulas
 }
 
+make.spark.formulas <- function(data, blocks = make.blocks(data),
+                          predictorMatrix = NULL) {
+  data <- check.spark.dataform(data)
+  cols <- sparklyr::sdf_schema(data)
+  formulas <- as.list(rep("~ 0", length(blocks)))
+  names(formulas) <- names(blocks)
+  
+  for (h in names(blocks)) {
+    y <- blocks[[h]]
+    if (is.null(predictorMatrix)) {
+      predictors <- names(cols)
+    } else {
+      type <- predictorMatrix[h, ]
+      predictors <- names(type)[type != 0]
+    }
+    x <- setdiff(predictors, y)
+    if (length(x) == 0) {
+      x <- "0"
+    }
+    formulas[[h]] <- paste(
+      paste(backticks(y), collapse = "+"), "~",
+      paste(backticks(x), collapse = "+")
+    )
+  }
+  
+  formulas <- lapply(formulas, as.formula)
+  formulas
+}
+
 #' Name formula list elements
 #'
 #' This helper function names any unnamed elements in the \code{formula}

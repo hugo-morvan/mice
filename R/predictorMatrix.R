@@ -37,6 +37,27 @@ make.predictorMatrix <- function(data, blocks = make.blocks(data),
   predictorMatrix
 }
 
+make.spark.predictorMatrix <- function(data, blocks = make.blocks(data),
+                                 predictorMatrix = NULL) {
+  input.predictorMatrix <- predictorMatrix
+  data <- check.spark.dataform(data)
+  cols <- sparklyr::sdf_schema(data)
+  predictorMatrix <- matrix(1, nrow = length(blocks), ncol = length(cols))
+  dimnames(predictorMatrix) <- list(names(blocks), names(cols))
+  for (i in row.names(predictorMatrix)) {
+    predictorMatrix[i, colnames(predictorMatrix) %in% i] <- 0
+  }
+  # preserve any user setting in predictorMatrix specification
+  if (!is.null(input.predictorMatrix)) {
+    for (i in row.names(predictorMatrix)) {
+      if (i %in% row.names(input.predictorMatrix)) {
+        predictorMatrix[i, ] <- input.predictorMatrix[i, ]
+      }
+    }
+  }
+  predictorMatrix
+}
+
 check.predictorMatrix <- function(predictorMatrix,
                                   data,
                                   blocks = NULL) {

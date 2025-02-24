@@ -541,7 +541,8 @@ mice.spark <- function(data,
   if (!is.na(seed)) set.seed(seed)
   
   # check form of data and m
-  data <- check.dataform(data)
+  data <- check.spark.dataform(data)
+  cols <- sparklyr::sdf_schema(data)
   m <- check.m(m)
   
   # determine input combination: predictorMatrix, blocks, formulas
@@ -552,9 +553,9 @@ mice.spark <- function(data,
   # case A
   if (mp & mb & mf) {
     # blocks lead
-    blocks <- make.blocks(colnames(data))
-    predictorMatrix <- make.predictorMatrix(data, blocks)
-    formulas <- make.formulas(data, blocks)
+    blocks <- make.blocks(names(cols))
+    predictorMatrix <- make.spark.predictorMatrix(data, blocks)
+    formulas <- make.spark.formulas(data, blocks)
     modeltype <- make.modeltype(modeltype, predictorMatrix, formulas, "pred")
   }
   # case B
@@ -624,7 +625,7 @@ mice.spark <- function(data,
   }
   
   chk <- check.cluster(data, predictorMatrix)
-  where <- check.where(where, data, blocks)
+  where <- check.where.spark(where, data, blocks)
   
   # check visitSequence, edit predictorMatrix for monotone
   user.visitSequence <- visitSequence

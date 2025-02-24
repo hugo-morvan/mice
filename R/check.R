@@ -41,7 +41,7 @@ check.dataform <- function(data) {
 
 # Spark version of check.dataform function
 
-check_spark_dataframe <- function(data) {
+check.spark.dataform <- function(data) {
   # Check spark dataframe data type
   if (!inherits(data, "tbl_spark")) {
     stop("Data should be a Spark DataFrame (tbl_spark)", call. = FALSE)

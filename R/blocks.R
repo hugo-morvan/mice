@@ -187,3 +187,4 @@ construct.blocks <- function(formulas = NULL, predictorMatrix = NULL) {
   blocks <- c(blocks.f, add.p)
   return(blocks)
 }
+

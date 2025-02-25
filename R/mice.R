@@ -438,7 +438,7 @@ mice <- function(data,
     user.visitSequence = user.visitSequence,
     maxit = maxit
   )
-  method <- check.method(
+  method <- check.method.spark(
     method = method, data = data, where = where,
     blocks = blocks, defaultMethod = defaultMethod
   )
@@ -623,7 +623,8 @@ mice.spark <- function(data,
     predictorMatrix <- check.predictorMatrix(predictorMatrix, data, blocks)
     modeltype <- make.modeltype(modeltype, predictorMatrix, formulas, "formula")
   }
-  
+  # print("**DEBUG** where:")
+  # print(where)
   chk <- check.cluster(data, predictorMatrix)
   where <- check.where.spark(where, data, blocks)
   

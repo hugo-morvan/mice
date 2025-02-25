@@ -22,3 +22,25 @@ nimp <- function(where, blocks = make.blocks(where)) {
   for (i in seq_along(blocks)) nimp[i] <- sum(nwhere[blocks[[i]]])
   nimp
 }
+
+
+# Spark version of nimp. Sould handle spark dataframes (where)
+# Number of imputation, Spark version
+nimp.spark <- function(where, blocks = make.blocks(where)) {
+  # Compute the column sum of the where (logical) matrix
+  # Convert bool to numeric
+  print("**DEBUG** where")
+  nwhere <- sapply(colnames(where), function(col) {
+    where %>%
+      summarize(total = sum(as.numeric(!!sym(col)), na.rm = TRUE)) %>%
+      collect() %>% pull(total)
+  })
+  print("**DEBUG** nwhere")
+  # Initialize the nimp vector, same length as blocks
+  nimp <- vector("integer", length = length(blocks))
+  # Assign names to the nimp vector
+  colnames(nimp) <- colnames(blocks)
+  # Loop through the blocks and compute the number of cells that need to be imputed
+  for (i in seq_along(blocks)) nimp[i] <- sum(nwhere[blocks[[i]]])
+  nimp
+}
